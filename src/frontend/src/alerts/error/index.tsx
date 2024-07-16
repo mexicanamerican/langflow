@@ -1,6 +1,6 @@
 import { Transition } from "@headlessui/react";
-import { XCircleIcon, XMarkIcon } from "@heroicons/react/24/outline";
 import { useEffect, useState } from "react";
+import IconComponent from "../../components/genericIconComponent";
 import { ErrorAlertType } from "../../types/alerts";
 
 export default function ErrorAlert({
@@ -8,7 +8,7 @@ export default function ErrorAlert({
   list = [],
   id,
   removeAlert,
-}: ErrorAlertType) {
+}: ErrorAlertType): JSX.Element {
   const [show, setShow] = useState(true);
   useEffect(() => {
     if (show) {
@@ -20,6 +20,7 @@ export default function ErrorAlert({
       }, 5000);
     }
   }, [id, removeAlert, show]);
+
   return (
     <Transition
       className="relative"
@@ -39,24 +40,26 @@ export default function ErrorAlert({
             removeAlert(id);
           }, 500);
         }}
-        className="rounded-md w-96 mt-6 shadow-xl bg-red-50 dark:bg-red-900 p-4 cursor-pointer"
+        className="error-build-message noflow nowheel nopan nodelete nodrag"
       >
         <div className="flex">
           <div className="flex-shrink-0">
-            <XCircleIcon
-              className="h-5 w-5 text-red-400 dark:text-red-50"
+            <IconComponent
+              name="XCircle"
+              className="error-build-message-circle"
               aria-hidden="true"
             />
           </div>
           <div className="ml-3">
-            <h3 className="text-sm font-medium text-red-800 dark:text-white/80">
-              {title}
-            </h3>
-            {list.length !== 0 ? (
-              <div className="mt-2 text-sm text-red-700 dark:text-red-50">
-                <ul className="list-disc space-y-1 pl-5">
+            <h3 className="error-build-foreground line-clamp-2">{title}</h3>
+            {list?.length !== 0 &&
+            list?.some((item) => item !== null && item !== undefined) ? (
+              <div className="error-build-message-div">
+                <ul className="error-build-message-list">
                   {list.map((item, index) => (
-                    <li key={index}>{item}</li>
+                    <li key={index} className="line-clamp-5">
+                      {item}
+                    </li>
                   ))}
                 </ul>
               </div>

@@ -1,176 +1,218 @@
-import { Dialog, Transition } from "@headlessui/react";
-import { XMarkIcon, CommandLineIcon } from "@heroicons/react/24/outline";
-import { Fragment, useContext, useRef, useState } from "react";
-import { PopUpContext } from "../../contexts/popUpContext";
-import AceEditor from "react-ace";
+import "ace-builds/src-noconflict/ace";
+import "ace-builds/src-noconflict/ext-language_tools";
 import "ace-builds/src-noconflict/mode-python";
 import "ace-builds/src-noconflict/theme-github";
 import "ace-builds/src-noconflict/theme-twilight";
-import "ace-builds/src-noconflict/ext-language_tools";
 // import "ace-builds/webpack-resolver";
-import { darkContext } from "../../contexts/darkContext";
-import { checkCode } from "../../controllers/API";
-import { alertContext } from "../../contexts/alertContext";
-import { TabsContext } from "../../contexts/tabsContext";
+import { useEffect, useState } from "react";
+import AceEditor from "react-ace";
+import IconComponent from "../../components/genericIconComponent";
+import { Button } from "../../components/ui/button";
+import { Input } from "../../components/ui/input";
+import {
+  BUG_ALERT,
+  CODE_ERROR_ALERT,
+  CODE_SUCCESS_ALERT,
+  FUNC_ERROR_ALERT,
+  IMPORT_ERROR_ALERT,
+} from "../../constants/alerts_constants";
+import {
+  CODE_PROMPT_DIALOG_SUBTITLE,
+  EDIT_CODE_TITLE,
+} from "../../constants/constants";
+import { postCustomComponent, postValidateCode } from "../../controllers/API";
+import useAlertStore from "../../stores/alertStore";
+import { useDarkStore } from "../../stores/darkStore";
+import { CodeErrorDataTypeAPI } from "../../types/api";
+import { codeAreaModalPropsType } from "../../types/components";
+import BaseModal from "../baseModal";
+
 export default function CodeAreaModal({
   value,
   setValue,
-}: {
-  setValue: (value: string) => void;
-  value: string;
-}) {
-  const [open, setOpen] = useState(true);
+  nodeClass,
+  setNodeClass,
+  children,
+  dynamic,
+  readonly = false,
+  open: myOpen,
+  setOpen: mySetOpen,
+}: codeAreaModalPropsType): JSX.Element {
   const [code, setCode] = useState(value);
-  const { dark } = useContext(darkContext);
-  const { setErrorData, setSuccessData } = useContext(alertContext);
-  const { closePopUp } = useContext(PopUpContext);
-  const ref = useRef();
-  function setModalOpen(x: boolean) {
-    setOpen(x);
-    if (x === false) {
-      setTimeout(() => {
-        closePopUp();
-      }, 300);
+  const [open, setOpen] =
+    mySetOpen !== undefined && myOpen !== undefined
+      ? [myOpen, mySetOpen]
+      : useState(false);
+  const dark = useDarkStore((state) => state.dark);
+  const [height, setHeight] = useState<string | null>(null);
+  const setSuccessData = useAlertStore((state) => state.setSuccessData);
+  const setErrorData = useAlertStore((state) => state.setErrorData);
+  const [error, setError] = useState<{
+    detail: CodeErrorDataTypeAPI;
+  } | null>(null);
+
+  useEffect(() => {
+    // if nodeClass.template has more fields other than code and dynamic is true
+    // do not run handleClick
+    if (dynamic && Object.keys(nodeClass!.template).length > 2) {
+      return;
+    }
+  }, []);
+
+  function processNonDynamicField() {
+    postValidateCode(code)
+      .then((apiReturn) => {
+        if (apiReturn.data) {
+          let importsErrors = apiReturn.data.imports.errors;
+          let funcErrors = apiReturn.data.function.errors;
+          if (funcErrors.length === 0 && importsErrors.length === 0) {
+            setSuccessData({
+              title: CODE_SUCCESS_ALERT,
+            });
+            setOpen(false);
+            setValue(code);
+            // setValue(code);
+          } else {
+            if (funcErrors.length !== 0) {
+              setErrorData({
+                title: FUNC_ERROR_ALERT,
+                list: funcErrors,
+              });
+            }
+            if (importsErrors.length !== 0) {
+              setErrorData({
+                title: IMPORT_ERROR_ALERT,
+                list: importsErrors,
+              });
+            }
+          }
+        } else {
+          setErrorData({
+            title: BUG_ALERT,
+          });
+        }
+      })
+      .catch((_) => {
+        setErrorData({
+          title: CODE_ERROR_ALERT,
+        });
+      });
+  }
+
+  function processDynamicField() {
+    postCustomComponent(code, nodeClass!)
+      .then((apiReturn) => {
+        const { data, type } = apiReturn.data;
+        if (data && type) {
+          setNodeClass(data, code, type);
+          setError({ detail: { error: undefined, traceback: undefined } });
+          setOpen(false);
+        }
+      })
+      .catch((err) => {
+        setError(err.response.data);
+      });
+  }
+
+  function processCode() {
+    if (!dynamic) {
+      processNonDynamicField();
+    } else {
+      processDynamicField();
     }
   }
-  return (
-    <Transition.Root show={open} appear={true} as={Fragment}>
-      <Dialog
-        as="div"
-        className="relative z-10"
-        onClose={setModalOpen}
-        initialFocus={ref}
-      >
-        <Transition.Child
-          as={Fragment}
-          enter="ease-out duration-300"
-          enterFrom="opacity-0"
-          enterTo="opacity-100"
-          leave="ease-in duration-200"
-          leaveFrom="opacity-100"
-          leaveTo="opacity-0"
-        >
-          <div className="fixed inset-0 bg-gray-500 dark:bg-gray-600 dark:bg-opacity-75 bg-opacity-75 transition-opacity" />
-        </Transition.Child>
 
-        <div className="fixed inset-0 z-10 overflow-y-auto">
-          <div className="flex h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
-            <Transition.Child
-              as={Fragment}
-              enter="ease-out duration-300"
-              enterFrom="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
-              enterTo="opacity-100 translate-y-0 sm:scale-100"
-              leave="ease-in duration-200"
-              leaveFrom="opacity-100 translate-y-0 sm:scale-100"
-              leaveTo="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+  function handleClick() {
+    processCode();
+  }
+
+  useEffect(() => {
+    // Function to be executed after the state changes
+    const delayedFunction = setTimeout(() => {
+      if (error?.detail.error !== undefined) {
+        //trigger to update the height, does not really apply any height
+        setHeight("90%");
+      }
+      //600 to happen after the transition of 500ms
+    }, 600);
+
+    // Cleanup function to clear the timeout if the component unmounts or the state changes again
+    return () => {
+      clearTimeout(delayedFunction);
+    };
+  }, [error, setHeight]);
+
+  useEffect(() => {
+    setCode(value);
+  }, [value, open]);
+
+  return (
+    <BaseModal open={open} setOpen={setOpen}>
+      <BaseModal.Trigger>{children}</BaseModal.Trigger>
+      <BaseModal.Header description={CODE_PROMPT_DIALOG_SUBTITLE}>
+        <span className="pr-2"> {EDIT_CODE_TITLE} </span>
+        <IconComponent
+          name="prompts"
+          className="h-6 w-6 pl-1 text-primary"
+          aria-hidden="true"
+        />
+      </BaseModal.Header>
+      <BaseModal.Content>
+        <Input
+          value={code}
+          readOnly
+          className="absolute left-[500%] top-[500%]"
+          id="codeValue"
+        />
+        <div className="flex h-full w-full flex-col transition-all">
+          <div className="h-full w-full">
+            <AceEditor
+              readOnly={readonly}
+              value={code}
+              mode="python"
+              setOptions={{ fontFamily: "monospace" }}
+              height={height ?? "100%"}
+              highlightActiveLine={true}
+              showPrintMargin={false}
+              fontSize={14}
+              showGutter
+              enableLiveAutocompletion
+              theme={dark ? "twilight" : "github"}
+              name="CodeEditor"
+              onChange={(value) => {
+                setCode(value);
+              }}
+              className="h-full w-full rounded-lg border-[1px] border-gray-300 custom-scroll dark:border-gray-600"
+            />
+          </div>
+          <div
+            className={
+              "whitespace-break-spaces transition-all delay-500" +
+              (error?.detail?.error !== undefined ? "h-2/6" : "h-0")
+            }
+          >
+            <div className="mt-5 h-full max-h-[10rem] w-full overflow-y-auto overflow-x-clip text-left custom-scroll">
+              <h1 className="text-lg text-error">{error?.detail?.error}</h1>
+              <div className="ml-2 mt-2 w-full text-sm text-destructive word-break-break-word">
+                <span className="w-full word-break-break-word">
+                  {error?.detail?.traceback}
+                </span>
+              </div>
+            </div>
+          </div>
+          <div className="flex h-fit w-full justify-end">
+            <Button
+              className="mt-3"
+              onClick={handleClick}
+              type="submit"
+              id="checkAndSaveBtn"
+              disabled={readonly}
             >
-              <Dialog.Panel className="relative flex flex-col justify-between transform h-[600px] overflow-hidden rounded-lg bg-white dark:bg-gray-800 text-left shadow-xl transition-all sm:my-8 w-[700px]">
-                <div className=" z-50 absolute top-0 right-0 hidden pt-4 pr-4 sm:block">
-                  <button
-                    type="button"
-                    className="rounded-md text-gray-400 hover:text-gray-500"
-                    onClick={() => {
-                      setModalOpen(false);
-                    }}
-                  >
-                    <span className="sr-only">Close</span>
-                    <XMarkIcon className="h-6 w-6" aria-hidden="true" />
-                  </button>
-                </div>
-                <div className="h-full w-full flex flex-col justify-center items-center">
-                  <div className="flex w-full pb-4 z-10 justify-center shadow-sm">
-                    <div className="mx-auto mt-4 flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-blue-100 dark:bg-gray-900 sm:mx-0 sm:h-10 sm:w-10">
-                      <CommandLineIcon
-                        className="h-6 w-6 text-blue-600"
-                        aria-hidden="true"
-                      />
-                    </div>
-                    <div className="mt-4 text-center sm:ml-4 sm:text-left">
-                      <Dialog.Title
-                        as="h3"
-                        className="text-lg font-medium dark:text-white leading-10 text-gray-900"
-                      >
-                        Edit Code
-                      </Dialog.Title>
-                    </div>
-                  </div>
-                  <div className="h-full w-full bg-gray-200 overflow-auto dark:bg-gray-900 p-4 gap-4 flex flex-row justify-center items-center">
-                    <div className="flex h-full w-full">
-                      <div className="overflow-hidden px-4 py-5 sm:p-6 w-full h-full rounded-lg bg-white dark:bg-gray-800 shadow">
-                        <AceEditor
-                          value={code}
-                          mode="python"
-                          highlightActiveLine={true}
-                          showPrintMargin={false}
-                          fontSize={14}
-                          showGutter
-                          enableLiveAutocompletion
-                          theme={dark ? "twilight" : "github"}
-                          name="CodeEditor"
-                          onChange={(value) => {
-                            setCode(value);
-                          }}
-                          className="h-full w-full rounded-lg"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                  <div className="bg-gray-200 dark:bg-gray-900 w-full pb-3 flex flex-row-reverse px-4">
-                    <button
-                      type="button"
-                      className="inline-flex w-full justify-center rounded-md border border-transparent bg-indigo-600 px-4 py-2 text-base font-medium text-white shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 sm:ml-3 sm:w-auto sm:text-sm"
-                      onClick={() => {
-                        checkCode(code)
-                          .then((apiReturn) => {
-                            if (apiReturn.data) {
-                              let importsErrors = apiReturn.data.imports.errors;
-                              let funcErrors = apiReturn.data.function.errors;
-                              if (
-                                funcErrors.length === 0 &&
-                                importsErrors.length === 0
-                              ) {
-                                setSuccessData({
-                                  title: "Code is ready to run",
-                                });
-                                setModalOpen(false);
-                                setValue(code);
-                              } else {
-                                if (funcErrors.length !== 0) {
-                                  setErrorData({
-                                    title: "There is an error in your function",
-                                    list: funcErrors,
-                                  });
-                                }
-                                if (importsErrors.length !== 0) {
-                                  setErrorData({
-                                    title: "There is an error in your imports",
-                                    list: importsErrors,
-                                  });
-                                }
-                              }
-                            } else {
-                              setErrorData({
-                                title: "Something went wrong, please try again",
-                              });
-                            }
-                          })
-                          .catch((_) =>
-                            setErrorData({
-                              title:
-                                "There is something wrong with this code, please review it",
-                            })
-                          );
-                      }}
-                    >
-                      Check & Save
-                    </button>
-                  </div>
-                </div>
-              </Dialog.Panel>
-            </Transition.Child>
+              Check & Save
+            </Button>
           </div>
         </div>
-      </Dialog>
-    </Transition.Root>
+      </BaseModal.Content>
+    </BaseModal>
   );
 }

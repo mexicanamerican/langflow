@@ -1,65 +1,75 @@
-import { ArrowTopRightOnSquareIcon } from "@heroicons/react/24/outline";
-import { useContext, useEffect, useState } from "react";
-import { PopUpContext } from "../../contexts/popUpContext";
+import { useEffect, useState } from "react";
 import CodeAreaModal from "../../modals/codeAreaModal";
-import TextAreaModal from "../../modals/textAreaModal";
-import { TextAreaComponentType } from "../../types/components";
+import { CodeAreaComponentType } from "../../types/components";
+
+import IconComponent from "../genericIconComponent";
 
 export default function CodeAreaComponent({
   value,
   onChange,
   disabled,
-}: TextAreaComponentType) {
-  const [myValue, setMyValue] = useState(value);
-  const { openPopUp } = useContext(PopUpContext);
+  editNode = false,
+  nodeClass,
+  dynamic,
+  setNodeClass,
+  id = "",
+  readonly = false,
+  open,
+  setOpen,
+}: CodeAreaComponentType) {
+  const [myValue, setMyValue] = useState(
+    typeof value == "string" ? value : JSON.stringify(value),
+  );
   useEffect(() => {
-    if (disabled) {
+    if (disabled && myValue !== "") {
       setMyValue("");
-      onChange("");
+      onChange("", undefined, true);
     }
-  }, [disabled, onChange]);
+  }, [disabled]);
+
+  useEffect(() => {
+    setMyValue(typeof value == "string" ? value : JSON.stringify(value));
+  }, [value]);
+
   return (
-    <div
-      className={
-        disabled ? "pointer-events-none cursor-not-allowed w-full" : "w-full"
-      }
-    >
-      <div className="w-full flex items-center gap-3">
-        <span
-          onClick={() => {
-            openPopUp(
-              <CodeAreaModal
-                value={myValue}
-                setValue={(t: string) => {
-                  setMyValue(t);
-                  onChange(t);
-                }}
-              />
-            );
-          }}
-          className={
-            "truncate block w-full text-gray-500 px-3 py-2 rounded-md border border-gray-300 dark:border-gray-700 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" +
-            (disabled ? " bg-gray-200" : "")
-          }
-        >
-          {myValue !== "" ? myValue : "Text empty"}
-        </span>
-        <button
-          onClick={() => {
-            openPopUp(
-              <CodeAreaModal
-                value={myValue}
-                setValue={(t: string) => {
-                  setMyValue(t);
-                  onChange(t);
-                }}
-              />
-            );
-          }}
-        >
-          <ArrowTopRightOnSquareIcon className="w-6 h-6 hover:text-blue-600 dark:text-gray-300" />
-        </button>
-      </div>
+    <div className={disabled ? "pointer-events-none w-full" : "w-full"}>
+      <CodeAreaModal
+        open={open}
+        setOpen={setOpen}
+        readonly={readonly}
+        dynamic={dynamic}
+        value={myValue}
+        nodeClass={nodeClass}
+        setNodeClass={setNodeClass!}
+        setValue={(value: string) => {
+          setMyValue(value);
+          onChange(value);
+        }}
+      >
+        <div className="flex w-full items-center gap-3">
+          <span
+            id={id}
+            data-testid={id}
+            className={
+              editNode
+                ? "input-edit-node input-dialog"
+                : (disabled ? "input-disable input-ring " : "") +
+                  " primary-input text-muted-foreground"
+            }
+          >
+            {myValue !== "" ? myValue : "Type something..."}
+          </span>
+          {!editNode && (
+            <IconComponent
+              name="ExternalLink"
+              className={
+                "icons-parameters-comp shrink-0" +
+                (disabled ? " text-ring" : " hover:text-accent-foreground")
+              }
+            />
+          )}
+        </div>
+      </CodeAreaModal>
     </div>
   );
 }

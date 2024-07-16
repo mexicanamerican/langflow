@@ -1,66 +1,86 @@
-import { ArrowTopRightOnSquareIcon } from "@heroicons/react/24/outline";
-import { useContext, useEffect, useState } from "react";
-import { PopUpContext } from "../../contexts/popUpContext";
-import { TextAreaComponentType } from "../../types/components";
+import { useEffect } from "react";
+import { EDIT_TEXT_MODAL_TITLE } from "../../constants/constants";
+import { TypeModal } from "../../constants/enums";
 import GenericModal from "../../modals/genericModal";
-import { TypeModal } from "../../utils";
+import { Case } from "../../shared/components/caseComponent";
+import { TextAreaComponentType } from "../../types/components";
+import IconComponent from "../genericIconComponent";
+import { Button } from "../ui/button";
+import { Input } from "../ui/input";
 
 export default function TextAreaComponent({
   value,
   onChange,
   disabled,
-}: TextAreaComponentType) {
-  const [myValue, setMyValue] = useState(value);
-  const { openPopUp } = useContext(PopUpContext);
+  editNode = false,
+  id = "",
+}: TextAreaComponentType): JSX.Element {
+  // Clear text area
   useEffect(() => {
-    if (disabled) {
-      setMyValue("");
-      onChange("");
+    if (disabled && value !== "") {
+      onChange("", undefined, true);
     }
-  }, [disabled, onChange]);
+  }, [disabled]);
+
   return (
-    <div className={disabled ? "pointer-events-none cursor-not-allowed" : ""}>
-      <div className="w-full flex items-center gap-3">
-        <span
-          onClick={() => {
-            openPopUp(
-              <GenericModal
-                type={TypeModal.TEXT}
-                buttonText="Finishing Editing"
-                modalTitle="Edit Text"
-                value={myValue}
-                setValue={(t: string) => {
-                  setMyValue(t);
-                  onChange(t);
-                }}
-              />
-            );
+    <div className={"flex w-full items-center " + (disabled ? "" : "")}>
+      <div className="flex w-full items-center gap-3" data-testid={"div-" + id}>
+        <Case condition={!editNode}>
+          <Input
+            id={id}
+            data-testid={id}
+            value={value}
+            disabled={disabled}
+            className={editNode ? "input-edit-node w-full" : "w-full"}
+            placeholder={"Type something..."}
+            onChange={(event) => {
+              onChange(event.target.value);
+            }}
+          />
+        </Case>
+        <GenericModal
+          type={TypeModal.TEXT}
+          buttonText="Finish Editing"
+          modalTitle={EDIT_TEXT_MODAL_TITLE}
+          value={value}
+          setValue={(value: string) => {
+            onChange(value);
           }}
-          className={
-            "truncate block w-full text-gray-500 dark:text-gray-100 px-3 py-2 rounded-md border border-gray-300 dark:border-gray-700 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" +
-            (disabled ? " bg-gray-200" : "")
-          }
+          disabled={disabled}
         >
-          {myValue !== "" ? myValue : "Text empty"}
-        </span>
-        <button
-          onClick={() => {
-            openPopUp(
-              <GenericModal
-                type={TypeModal.TEXT}
-                buttonText="Finishing Editing"
-                modalTitle="Edit Text"
-                value={myValue}
-                setValue={(t: string) => {
-                  setMyValue(t);
-                  onChange(t);
-                }}
-              />
-            );
-          }}
-        >
-          <ArrowTopRightOnSquareIcon className="w-6 h-6 hover:text-blue-600 dark:text-gray-300" />
-        </button>
+          {!editNode ? (
+            <div className="flex items-center">
+              <Button unstyled>
+                <IconComponent
+                  strokeWidth={1.5}
+                  id={id}
+                  name="ExternalLink"
+                  className={
+                    "icons-parameters-comp shrink-0" +
+                    (disabled ? " text-ring" : " hover:text-accent-foreground")
+                  }
+                />
+              </Button>
+            </div>
+          ) : (
+            <Button unstyled className="w-full">
+              <div className="flex w-full items-center gap-3">
+                <span
+                  id={id}
+                  data-testid={id}
+                  className={
+                    editNode
+                      ? "input-edit-node input-dialog"
+                      : (disabled ? "input-disable text-ring " : "") +
+                        " primary-input text-muted-foreground"
+                  }
+                >
+                  {value !== "" ? value : "Type something..."}
+                </span>
+              </div>
+            </Button>
+          )}
+        </GenericModal>
       </div>
     </div>
   );

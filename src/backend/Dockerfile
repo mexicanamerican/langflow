@@ -1,4 +1,4 @@
-FROM logspace/backend_build as backend_build
+FROM langflowai/backend_build as backend_build
 
 FROM python:3.10-slim
 WORKDIR /app
@@ -11,4 +11,4 @@ RUN rm *.whl
 
 EXPOSE 80
 
-CMD [ "uvicorn", "--host", "0.0.0.0", "--port", "80", "langflow.backend.app:app" ]
+CMD [ "uvicorn", "--host", "0.0.0.0", "--port", "7860", "--factory", "langflow.main:create_app" ]

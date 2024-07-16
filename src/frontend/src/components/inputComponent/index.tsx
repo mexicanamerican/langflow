@@ -1,66 +1,211 @@
-import { useContext, useEffect, useState } from "react";
+import * as Form from "@radix-ui/react-form";
+import { useEffect, useRef, useState } from "react";
 import { InputComponentType } from "../../types/components";
-import { classNames } from "../../utils";
-import { TabsContext } from "../../contexts/tabsContext";
+import { handleKeyDown } from "../../utils/reactflowUtils";
+import { classNames, cn } from "../../utils/utils";
+import ForwardedIconComponent from "../genericIconComponent";
+import { Input } from "../ui/input";
+import CustomInputPopover from "./components/popover";
+import CustomInputPopoverObject from "./components/popoverObject";
 
 export default function InputComponent({
-  value,
+  autoFocus = false,
+  onBlur,
+  value = "",
   onChange,
-  disableCopyPaste = false,
   disabled,
+  required = false,
+  isForm = false,
   password,
-}: InputComponentType) {
-  const [myValue, setMyValue] = useState(value ?? "");
+  editNode = false,
+  placeholder = "Type something...",
+  className,
+  id = "",
+  blurOnEnter = false,
+  optionsIcon = "ChevronsUpDown",
+  selectedOption,
+  setSelectedOption,
+  selectedOptions = [],
+  setSelectedOptions,
+  options = [],
+  optionsPlaceholder = "Search options...",
+  optionsButton,
+  optionButton,
+  objectOptions,
+  isObjectOption = false,
+  name,
+  onChangeFolderName,
+}: InputComponentType): JSX.Element {
   const [pwdVisible, setPwdVisible] = useState(false);
-  const { setDisableCopyPaste } = useContext(TabsContext);
+  const refInput = useRef<HTMLInputElement>(null);
+  const [showOptions, setShowOptions] = useState<boolean>(false);
+
   useEffect(() => {
-    if (disabled) {
-      setMyValue("");
-      onChange("");
+    if (disabled && value && onChange && value !== "") {
+      onChange("", true);
     }
-  }, [disabled, onChange]);
+  }, [disabled]);
+
+  function onInputLostFocus(event): void {
+    if (onBlur) onBlur(event);
+  }
+
   return (
-    <div
-      className={
-        disabled
-          ? "relative pointer-events-none cursor-not-allowed"
-          : "relative"
-      }
-    >
-      <input
-        value={myValue}
-        onFocus={() => {
-          if (disableCopyPaste) setDisableCopyPaste(true);
-        }}
-        onBlur={() => {
-          if (disableCopyPaste) setDisableCopyPaste(false);
-        }}
-        className={classNames(
-          "block w-full pr-12 form-input dark:bg-gray-900 dark:text-gray-300 dark:border-gray-600 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm",
-          disabled ? " bg-gray-200 dark:bg-gray-700" : "",
-          password && !pwdVisible && myValue !== "" ? "password" : ""
-        )}
-        placeholder="Type something..."
-        onChange={(e) => {
-          setMyValue(e.target.value);
-          onChange(e.target.value);
-        }}
-      />
-      <button
-        className="absolute inset-y-0 right-0 items-center px-4 text-gray-600"
-        onClick={() => {
-          setPwdVisible(!pwdVisible);
-        }}
-      >
-        {password &&
-          (pwdVisible ? (
+    <div className="relative w-full">
+      {isForm ? (
+        <Form.Control asChild>
+          <Input
+            name={name}
+            id={"form-" + id}
+            ref={refInput}
+            onBlur={onInputLostFocus}
+            autoFocus={autoFocus}
+            type={password && !pwdVisible ? "password" : "text"}
+            value={value}
+            disabled={disabled}
+            required={required}
+            className={classNames(
+              password && !pwdVisible && value !== ""
+                ? "text-clip password"
+                : "",
+              editNode ? "input-edit-node" : "",
+              password && editNode ? "pr-8" : "",
+              password && !editNode ? "pr-10" : "",
+              className!,
+            )}
+            placeholder={password && editNode ? "Key" : placeholder}
+            onChange={(e) => {
+              if (onChangeFolderName) {
+                return onChangeFolderName(e);
+              }
+              onChange && onChange(e.target.value);
+            }}
+            onCopy={(e) => {
+              e.preventDefault();
+            }}
+            onKeyDown={(e) => {
+              handleKeyDown(e, value, "");
+              if (blurOnEnter && e.key === "Enter") refInput.current?.blur();
+            }}
+          />
+        </Form.Control>
+      ) : (
+        <>
+          {isObjectOption ? (
+            // Content to render when isObjectOption is true
+            <CustomInputPopoverObject
+              refInput={refInput}
+              handleKeyDown={handleKeyDown}
+              optionButton={optionButton}
+              optionsButton={optionsButton}
+              showOptions={showOptions}
+              onChange={onChange}
+              id={`object-${id}`}
+              onInputLostFocus={onInputLostFocus}
+              selectedOption={selectedOption}
+              setSelectedOption={setSelectedOption}
+              selectedOptions={selectedOptions}
+              setSelectedOptions={setSelectedOptions}
+              options={objectOptions}
+              value={value}
+              editNode={editNode}
+              autoFocus={autoFocus}
+              disabled={disabled}
+              setShowOptions={setShowOptions}
+              required={required}
+              placeholder={placeholder}
+              blurOnEnter={blurOnEnter}
+              optionsPlaceholder={optionsPlaceholder}
+              className={className}
+            />
+          ) : (
+            <CustomInputPopover
+              refInput={refInput}
+              handleKeyDown={handleKeyDown}
+              optionButton={optionButton}
+              optionsButton={optionsButton}
+              showOptions={showOptions}
+              onChange={onChange}
+              id={`popover-anchor-${id}`}
+              onInputLostFocus={onInputLostFocus}
+              selectedOption={selectedOption}
+              setSelectedOption={setSelectedOption}
+              selectedOptions={selectedOptions}
+              setSelectedOptions={setSelectedOptions}
+              value={value}
+              autoFocus={autoFocus}
+              disabled={disabled}
+              setShowOptions={setShowOptions}
+              required={required}
+              password={password}
+              pwdVisible={pwdVisible}
+              editNode={editNode}
+              placeholder={placeholder}
+              blurOnEnter={blurOnEnter}
+              options={options}
+              optionsPlaceholder={optionsPlaceholder}
+              className={className}
+            />
+          )}
+        </>
+      )}
+
+      {(setSelectedOption || setSelectedOptions) && (
+        <span
+          className={cn(
+            password && selectedOption === "" ? "right-8" : "right-0",
+            "absolute inset-y-0 flex items-center pr-2.5",
+          )}
+        >
+          <button
+            onClick={(e) => {
+              setShowOptions(!showOptions);
+              e.preventDefault();
+              e.stopPropagation();
+            }}
+            className={cn(
+              onChange && setSelectedOption && selectedOption !== ""
+                ? "text-medium-indigo"
+                : "text-muted-foreground",
+              "hover:text-accent-foreground",
+            )}
+          >
+            <ForwardedIconComponent
+              name={optionsIcon}
+              className={"h-4 w-4"}
+              aria-hidden="true"
+            />
+          </button>
+        </span>
+      )}
+
+      {password && (!setSelectedOption || selectedOption === "") && (
+        <button
+          type="button"
+          tabIndex={-1}
+          className={classNames(
+            "mb-px",
+            editNode
+              ? "input-component-true-button"
+              : "input-component-false-button",
+          )}
+          onClick={(event) => {
+            event.preventDefault();
+            setPwdVisible(!pwdVisible);
+          }}
+        >
+          {pwdVisible ? (
             <svg
               xmlns="http://www.w3.org/2000/svg"
               fill="none"
               viewBox="0 0 24 24"
               strokeWidth={1.5}
               stroke="currentColor"
-              className="w-5 h-5"
+              className={classNames(
+                editNode
+                  ? "input-component-true-svg"
+                  : "input-component-false-svg",
+              )}
             >
               <path
                 strokeLinecap="round"
@@ -75,7 +220,11 @@ export default function InputComponent({
               viewBox="0 0 24 24"
               strokeWidth={1.5}
               stroke="currentColor"
-              className="w-5 h-5"
+              className={classNames(
+                editNode
+                  ? "input-component-true-svg"
+                  : "input-component-false-svg",
+              )}
             >
               <path
                 strokeLinecap="round"
@@ -88,8 +237,9 @@ export default function InputComponent({
                 d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
               />
             </svg>
-          ))}
-      </button>
+          )}
+        </button>
+      )}
     </div>
   );
 }

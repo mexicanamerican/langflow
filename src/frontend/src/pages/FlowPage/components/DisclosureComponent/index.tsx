@@ -1,42 +1,49 @@
-import { ChevronRightIcon } from "@heroicons/react/24/solid";
 import { Disclosure } from "@headlessui/react";
+import IconComponent from "../../../../components/genericIconComponent";
 import { DisclosureComponentType } from "../../../../types/components";
 
 export default function DisclosureComponent({
   button: { title, Icon, buttons = [] },
+  isChild = true,
   children,
-}: DisclosureComponentType) {
+  defaultOpen,
+}: DisclosureComponentType): JSX.Element {
   return (
-    <Disclosure as="div" key={title}>
+    <Disclosure as="div" defaultOpen={defaultOpen} key={title}>
       {({ open }) => (
         <>
           <div>
-            <Disclosure.Button className="select-none bg-gray-50 dark:bg-gray-700/60 dark:border-y-gray-600 w-full flex justify-between items-center -mt-px px-3 py-2 border-y border-y-gray-200">
-              <div className="flex gap-4">
-                <Icon className="w-6 text-gray-800 dark:text-white/80" />
-                <span className="flex items-center text-sm text-gray-800 dark:text-white/80 font-medium">
-                  {title}
-                </span>
+            <Disclosure.Button
+              className={
+                isChild
+                  ? "components-disclosure-arrangement-child"
+                  : "components-disclosure-arrangement"
+              }
+              data-testid={`disclosure-${title.toLocaleLowerCase()}`}
+            >
+              <div className={"flex gap-4" + (isChild ? " pl-2" : "")}>
+                {/* BUG ON THIS ICON */}
+                <Icon strokeWidth={1.5} size={22} className="text-primary" />
+                <span className="components-disclosure-title">{title}</span>
               </div>
-              <div className="flex gap-2">
-                {buttons.map((x, index) => (
-                  <button key={index} onClick={x.onClick}>
-                    {x.Icon}
+              <div className="components-disclosure-div">
+                {buttons.map((btn, index) => (
+                  <button key={index} onClick={btn.onClick}>
+                    {btn.Icon}
                   </button>
                 ))}
                 <div>
-                  <ChevronRightIcon
+                  <IconComponent
+                    name="ChevronRight"
                     className={`${
-                      open ? "rotate-90 transform" : ""
-                    } h-4 w-4 text-gray-800 dark:text-white`}
+                      open || defaultOpen ? "rotate-90 transform" : ""
+                    } h-4 w-4 text-foreground`}
                   />
                 </div>
               </div>
             </Disclosure.Button>
           </div>
-          <Disclosure.Panel as="div" className="-mt-px">
-            {children}
-          </Disclosure.Panel>
+          <Disclosure.Panel as="div">{children}</Disclosure.Panel>
         </>
       )}
     </Disclosure>

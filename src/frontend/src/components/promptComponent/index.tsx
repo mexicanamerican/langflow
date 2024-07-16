@@ -1,73 +1,69 @@
-import { ArrowTopRightOnSquareIcon } from "@heroicons/react/24/outline";
-import { useContext, useEffect, useState } from "react";
-import { PopUpContext } from "../../contexts/popUpContext";
-import CodeAreaModal from "../../modals/codeAreaModal";
-import TextAreaModal from "../../modals/textAreaModal";
-import { TextAreaComponentType } from "../../types/components";
+import { useEffect } from "react";
+
+import { TypeModal } from "../../constants/enums";
 import GenericModal from "../../modals/genericModal";
-import { TypeModal } from "../../utils";
+import { PromptAreaComponentType } from "../../types/components";
+import IconComponent from "../genericIconComponent";
+import { Button } from "../ui/button";
 
 export default function PromptAreaComponent({
+  field_name,
+  setNodeClass,
+  nodeClass,
   value,
   onChange,
   disabled,
-}: TextAreaComponentType) {
-  const [myValue, setMyValue] = useState(value);
-  const { openPopUp } = useContext(PopUpContext);
+  editNode = false,
+  id = "",
+  readonly = false,
+}: PromptAreaComponentType): JSX.Element {
   useEffect(() => {
-    if (disabled) {
-      setMyValue("");
-      onChange("");
+    if (disabled && value !== "") {
+      onChange("", undefined, true);
     }
-  }, [disabled, onChange]);
+  }, [disabled]);
+
   return (
-    <div
-      className={
-        disabled ? "pointer-events-none cursor-not-allowed w-full" : " w-full"
-      }
-    >
-      <div className="w-full flex items-center gap-3">
-        <span
-          onClick={() => {
-            openPopUp(
-              <GenericModal
-                type={TypeModal.PROMPT}
-                value={myValue}
-                buttonText="Check & Save"
-                modalTitle="Edit Prompt"
-                setValue={(t: string) => {
-                  setMyValue(t);
-                  onChange(t);
-                }}
+    <div className={disabled ? "pointer-events-none w-full" : "w-full"}>
+      <GenericModal
+        id={id}
+        field_name={field_name}
+        readonly={readonly}
+        type={TypeModal.PROMPT}
+        value={value}
+        buttonText="Check & Save"
+        modalTitle="Edit Prompt"
+        setValue={onChange}
+        nodeClass={nodeClass}
+        setNodeClass={setNodeClass}
+      >
+        <Button unstyled className="w-full">
+          <div className="flex w-full items-center gap-3">
+            <span
+              id={id}
+              data-testid={id}
+              className={
+                editNode
+                  ? "input-edit-node input-dialog"
+                  : (disabled ? "input-disable text-ring " : "") +
+                    " primary-input text-muted-foreground"
+              }
+            >
+              {value !== "" ? value : "Type your prompt here..."}
+            </span>
+            {!editNode && (
+              <IconComponent
+                id={id}
+                name="ExternalLink"
+                className={
+                  "icons-parameters-comp shrink-0" +
+                  (disabled ? " text-ring" : " hover:text-accent-foreground")
+                }
               />
-            );
-          }}
-          className={
-            "truncate block w-full text-gray-500 px-3 py-2 rounded-md border border-gray-300 dark:border-gray-700 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" +
-            (disabled ? " bg-gray-200" : "")
-          }
-        >
-          {myValue !== "" ? myValue : "Text empty"}
-        </span>
-        <button
-          onClick={() => {
-            openPopUp(
-              <GenericModal
-                type={TypeModal.PROMPT}
-                value={myValue}
-                buttonText="Check & Save"
-                modalTitle="Edit Prompt"
-                setValue={(t: string) => {
-                  setMyValue(t);
-                  onChange(t);
-                }}
-              />
-            );
-          }}
-        >
-          <ArrowTopRightOnSquareIcon className="w-6 h-6 hover:text-blue-600 dark:text-gray-300" />
-        </button>
-      </div>
+            )}
+          </div>
+        </Button>
+      </GenericModal>
     </div>
   );
 }

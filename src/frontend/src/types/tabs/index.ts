@@ -1,30 +1,71 @@
-import { FlowType } from "../flow";
+import { XYPosition } from "reactflow";
+import { FlowType, NodeDataType } from "../flow";
 
-export type TabsContextType = {
-  save: () => void;
-  tabIndex: number;
-  setTabIndex: (index: number) => void;
-  flows: Array<FlowType>;
+type OnChange<ChangesType> = (changes: ChangesType[]) => void;
+
+export type FlowsContextType = {
+  //keep
+  saveFlow: (flow?: FlowType, silent?: boolean) => Promise<void>;
+  tabId: string;
+  //keep
+  isLoading: boolean;
+  setTabId: (index: string) => void;
+  //keep
   removeFlow: (id: string) => void;
-  addFlow: (flowData?: FlowType, newFlow?: boolean) => void;
-  updateFlow: (newFlow: FlowType) => void;
-  incrementNodeId: () => string;
-  downloadFlow: (flow: FlowType) => void;
-  uploadFlow: (newFlow?: boolean) => void;
-  hardReset: () => void;
-  //disable CopyPaste
-  disableCopyPaste: boolean;
-  setDisableCopyPaste: (value: boolean) => void;
-  getNodeId: () => string;
-  paste: (
-    selection: { nodes: any; edges: any },
-    position: { x: number; y: number }
+  refreshFlows: () => void;
+  //keep
+  addFlow: (
+    newProject: boolean,
+    flow?: FlowType,
+    override?: boolean,
+    position?: XYPosition,
+  ) => Promise<String | undefined>;
+  downloadFlow: (
+    flow: FlowType,
+    flowName: string,
+    flowDescription?: string,
   ) => void;
+  //keep
+  downloadFlows: () => void;
+  //keep
+  uploadFlows: () => void;
+  setVersion: (version: string) => void;
+  uploadFlow: ({
+    newProject,
+    file,
+    isComponent,
+    position,
+  }: {
+    newProject: boolean;
+    file?: File;
+    isComponent?: boolean;
+    position?: XYPosition;
+  }) => Promise<String | never>;
+  tabsState: FlowsState;
+  setTabsState: (
+    update: FlowsState | ((oldState: FlowsState) => FlowsState),
+  ) => void;
+  saveComponent: (
+    component: NodeDataType,
+    override: boolean,
+  ) => Promise<String | undefined>;
+  deleteComponent: (key: string) => void;
+  version: string;
+  flows: Array<FlowType>;
 };
 
-export type LangFlowState = {
-  tabIndex: number;
-  flows: FlowType[];
-  id: string;
-  nodeId: number;
+export type FlowsState = {
+  [key: string]: FlowState | undefined;
+};
+
+export type FlowState = {
+  template?: string;
+  input_keys?: Object;
+  memory_keys?: Array<string>;
+  handle_keys?: Array<string>;
+};
+
+export type errorsVarType = {
+  title: string;
+  list?: Array<string>;
 };

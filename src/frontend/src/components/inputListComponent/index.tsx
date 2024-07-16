@@ -1,77 +1,109 @@
-import { PlusIcon, XMarkIcon } from "@heroicons/react/24/outline";
-import { useContext, useEffect, useState } from "react";
+import { useEffect } from "react";
 import { InputListComponentType } from "../../types/components";
-import { TabsContext } from "../../contexts/tabsContext";
 
 import _ from "lodash";
+import { classNames, cn } from "../../utils/utils";
+import IconComponent from "../genericIconComponent";
+import { Button } from "../ui/button";
+import { Input } from "../ui/input";
 
 export default function InputListComponent({
   value,
   onChange,
   disabled,
-}: InputListComponentType) {
-  const [inputList, setInputList] = useState(value ?? [""]);
+  editNode = false,
+  componentName,
+  playgroundDisabled,
+}: InputListComponentType): JSX.Element {
   useEffect(() => {
-    if (disabled) {
-      setInputList([""]);
+    if (disabled && value.length > 0 && value[0] !== "") {
       onChange([""]);
     }
-  }, [disabled, onChange]);
+  }, [disabled]);
+
+  // @TODO Recursive Character Text Splitter - the value might be in string format, whereas the InputListComponent specifically requires an array format. To ensure smooth operation and prevent potential errors, it's crucial that we handle the conversion from a string to an array with the string as its element.
+  if (typeof value === "string") {
+    value = [value];
+  }
+
+  if (!value?.length) value = [""];
+
   return (
     <div
-      className={
-        (disabled ? "pointer-events-none cursor-not-allowed" : "") +
-        "flex flex-col gap-3"
-      }
+      className={classNames(
+        value.length > 1 && editNode ? "my-1" : "",
+        "flex w-full flex-col gap-3",
+      )}
     >
-      {inputList.map((i, idx) => (
-        <div key={idx} className="w-full flex gap-3">
-          <input
-            type="text"
-            value={i}
-            className={
-              "block w-full form-input rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" +
-              (disabled ? " bg-gray-200" : "")
-            }
-            placeholder="Type something..."
-            onChange={(e) => {
-              setInputList((old) => {
-                let newInputList = _.cloneDeep(old);
-                newInputList[idx] = e.target.value;
-                return newInputList;
-              });
-              onChange(inputList);
-            }}
-          />
-          {idx === inputList.length - 1 ? (
-            <button
-              onClick={() => {
-                setInputList((old) => {
-                  let newInputList = _.cloneDeep(old);
+      {value.map((singleValue, idx) => {
+        return (
+          <div key={idx} className="flex w-full gap-3">
+            <Input
+              disabled={disabled || playgroundDisabled}
+              type="text"
+              value={singleValue}
+              className={editNode ? "input-edit-node" : ""}
+              placeholder="Type something..."
+              onChange={(event) => {
+                let newInputList = _.cloneDeep(value);
+                newInputList[idx] = event.target.value;
+                onChange(newInputList);
+              }}
+              data-testid={
+                `input-list-input${editNode ? "-edit" : ""}_${componentName}-` +
+                idx
+              }
+            />
+            {idx === 0 ? (
+              <Button
+                unstyled
+                className={cn(
+                  disabled || playgroundDisabled
+                    ? "cursor-not-allowed text-muted-foreground"
+                    : "text-primary hover:text-accent-foreground",
+                )}
+                onClick={(e) => {
+                  let newInputList = _.cloneDeep(value);
                   newInputList.push("");
-                  return newInputList;
-                });
-                onChange(inputList);
-              }}
-            >
-              <PlusIcon className="w-4 h-4 hover:text-blue-600" />
-            </button>
-          ) : (
-            <button
-              onClick={() => {
-                setInputList((old) => {
-                  let newInputList = _.cloneDeep(old);
+                  onChange(newInputList);
+                  e.preventDefault();
+                }}
+                data-testid={
+                  `input-list-plus-btn${
+                    editNode ? "-edit" : ""
+                  }_${componentName}-` + idx
+                }
+                disabled={disabled || playgroundDisabled}
+              >
+                <IconComponent name="Plus" className="h-4 w-4" />
+              </Button>
+            ) : (
+              <Button
+                unstyled
+                className={cn(
+                  disabled || playgroundDisabled
+                    ? "cursor-not-allowed text-muted-foreground"
+                    : "text-primary hover:text-accent-foreground",
+                )}
+                data-testid={
+                  `input-list-minus-btn${
+                    editNode ? "-edit" : ""
+                  }_${componentName}-` + idx
+                }
+                onClick={(e) => {
+                  let newInputList = _.cloneDeep(value);
                   newInputList.splice(idx, 1);
-                  return newInputList;
-                });
-                onChange(inputList);
-              }}
-            >
-              <XMarkIcon className="w-4 h-4 hover:text-red-600" />
-            </button>
-          )}
-        </div>
-      ))}
+                  onChange(newInputList);
+                  e.preventDefault();
+                }}
+                disabled={disabled || playgroundDisabled}
+              >
+                <IconComponent name="X" className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 }
